@@ -5,7 +5,7 @@
 window.__spbLoaded = true;
 const $ = (s) => document.querySelector(s);
 const SR = 44100;
-const VERSION = 'v9';
+const VERSION = 'v11';
 
 /* ---------------------------------------------------------------- diagnóstico e informes de error */
 const T0 = performance.now(), LOGS = [], TRACE = [], DIAG = {};
@@ -75,19 +75,19 @@ const MODEL4_URL = 'https://huggingface.co/timcsy/demucs-web-onnx/resolve/main/h
 const MODEL6_URL = 'https://huggingface.co/StemSplitio/htdemucs-6s-onnx/resolve/main/htdemucs_6s_fp16weights.onnx';   // 6 stems: + guitarra y piano
 
 const CATS = [
-  { key: 'break', folder: '01_Drum_Breaks', prefix: 'Break', numbered: true, loop: true, title: 'Breaks de batería' },
-  { key: 'bass_loop', folder: '02_Bass_Loops', prefix: 'BassLoop', numbered: true, loop: true, title: 'Loops de bajo' },
-  { key: 'inst_loop', folder: '03_Instrument_Loops', prefix: 'InstLoop', numbered: true, loop: true, title: 'Loops de instrumentos' },
-  { key: 'guitar_loop', folder: '03_Instrument_Loops/Guitar', prefix: 'GuitarLoop', numbered: true, loop: true, title: 'Loops de guitarra' },
-  { key: 'keys_loop', folder: '03_Instrument_Loops/Keys', prefix: 'KeysLoop', numbered: true, loop: true, title: 'Loops de teclado / piano' },
-  { key: 'kick', folder: '04_One_Shots/Drums/Kicks', prefix: 'Kick', numbered: true, title: 'Bombos', drum: true },
-  { key: 'snare', folder: '04_One_Shots/Drums/Snares', prefix: 'Snare', numbered: true, title: 'Cajas', drum: true },
-  { key: 'hat_closed', folder: '04_One_Shots/Drums/HiHats_Closed', prefix: 'HatClosed', numbered: true, title: 'Hi-hats cerrados', drum: true },
-  { key: 'hat_open', folder: '04_One_Shots/Drums/HiHats_Open', prefix: 'HatOpen', numbered: true, title: 'Hi-hats abiertos', drum: true },
-  { key: 'tom', folder: '04_One_Shots/Drums/Toms', prefix: 'Tom', numbered: true, title: 'Toms', drum: true },
-  { key: 'cymbal', folder: '04_One_Shots/Drums/Cymbals_Perc', prefix: 'Cymbal', numbered: true, title: 'Platos y percusión', drum: true },
-  { key: 'bass_note', folder: '04_One_Shots/Bass_Notes', prefix: 'BassNote', numbered: false, title: 'Notas de bajo' },
-  { key: 'chord', folder: '04_One_Shots/Chords', prefix: 'Chord', numbered: false, title: 'Acordes' },
+  { key: 'break', color: '#fb923c', folder: '01_Drum_Breaks', prefix: 'Break', numbered: true, loop: true, title: 'Breaks de batería' },
+  { key: 'bass_loop', color: '#a78bfa', folder: '02_Bass_Loops', prefix: 'BassLoop', numbered: true, loop: true, title: 'Loops de bajo' },
+  { key: 'inst_loop', color: '#5eead4', folder: '03_Instrument_Loops', prefix: 'InstLoop', numbered: true, loop: true, title: 'Loops de instrumentos' },
+  { key: 'guitar_loop', color: '#facc15', folder: '03_Instrument_Loops/Guitar', prefix: 'GuitarLoop', numbered: true, loop: true, title: 'Loops de guitarra' },
+  { key: 'keys_loop', color: '#60a5fa', folder: '03_Instrument_Loops/Keys', prefix: 'KeysLoop', numbered: true, loop: true, title: 'Loops de teclado / piano' },
+  { key: 'kick', color: '#f87171', folder: '04_One_Shots/Drums/Kicks', prefix: 'Kick', numbered: true, title: 'Bombos', drum: true },
+  { key: 'snare', color: '#fbbf24', folder: '04_One_Shots/Drums/Snares', prefix: 'Snare', numbered: true, title: 'Cajas', drum: true },
+  { key: 'hat_closed', color: '#22d3ee', folder: '04_One_Shots/Drums/HiHats_Closed', prefix: 'HatClosed', numbered: true, title: 'Hi-hats cerrados', drum: true },
+  { key: 'hat_open', color: '#38bdf8', folder: '04_One_Shots/Drums/HiHats_Open', prefix: 'HatOpen', numbered: true, title: 'Hi-hats abiertos', drum: true },
+  { key: 'tom', color: '#f472b6', folder: '04_One_Shots/Drums/Toms', prefix: 'Tom', numbered: true, title: 'Toms', drum: true },
+  { key: 'cymbal', color: '#cbd5e1', folder: '04_One_Shots/Drums/Cymbals_Perc', prefix: 'Cymbal', numbered: true, title: 'Platos y percusión', drum: true },
+  { key: 'bass_note', color: '#c084fc', folder: '04_One_Shots/Bass_Notes', prefix: 'BassNote', numbered: false, title: 'Notas de bajo' },
+  { key: 'chord', color: '#4ade80', folder: '04_One_Shots/Chords', prefix: 'Chord', numbered: false, title: 'Acordes' },
 ];
 const CAT = Object.fromEntries(CATS.map((c) => [c.key, c]));
 
@@ -416,7 +416,7 @@ function renderGroups() {
     const arr = (byCat[c.key] || []).sort((a, b) => a.rank - b.rank || (a.id < b.id ? -1 : 1));
     if (!arr.length && !c.drum) continue;
     const sec = document.createElement('section');
-    sec.className = 'grp'; sec.dataset.cat = c.key;
+    sec.className = 'grp'; sec.dataset.cat = c.key; sec.style.setProperty('--c', c.color);
     sec.innerHTML = `<div class="ghead"><h2>${c.title}${c.loop ? '<span class="loopmark">bucle</span>' : ''}</h2>
       <span class="path">${c.folder}/</span><span class="sp"></span><span class="cnt"></span>
       <button class="small" data-all="1">Todos</button><button class="small" data-all="0">Ninguno</button></div><div class="rows"></div>`;
@@ -446,14 +446,14 @@ function makeRow(s, c) {
   row.querySelector('.name').onclick = () => select(s.id, false);
   const sel = row.querySelector('select');
   if (sel) sel.onchange = () => { if (sel.value === s.cat) delete overrides[s.id]; else overrides[s.id] = sel.value; renderGroups(); refresh(); };
-  drawWave(row.querySelector('canvas'), s.peaks);
+  drawWave(row.querySelector('canvas'), s.peaks, (CAT[catOf(s)] || {}).color);
   return row;
 }
-function drawWave(cv, peaks) {
+function drawWave(cv, peaks, color) {
   const dpr = window.devicePixelRatio || 1, w = 190, h = 34;
   cv.width = w * dpr; cv.height = h * dpr;
   const g = cv.getContext('2d'); g.scale(dpr, dpr);
-  const bw = w / peaks.length; g.fillStyle = '#5eead4';
+  const bw = w / peaks.length; g.fillStyle = color || '#5eead4';
   peaks.forEach((p, i) => { const bh = Math.max(1.5, p * (h - 6)); g.fillRect(i * bw + 0.5, (h - bh) / 2, Math.max(1, bw - 1), bh); });
 }
 function refresh() {
@@ -564,7 +564,10 @@ $('#export').addEventListener('click', async () => {
       files.push({ name: `${pack}/${folder}/${names[s.id]}`, data: wav24(s.audio) });
       counts[folder] = (counts[folder] || 0) + 1;
     }
-    const info = [pack, '='.repeat(pack.length), '', `Tempo: ${song.bpmInt} BPM (${song.bpm.toFixed(2)})`, `Tonalidad estimada: ${song.key}`,
+    const sepTxt = sepMethod === 'demucs6' ? 'Demucs IA, 6 stems' : sepMethod === 'demucs' ? 'Demucs IA, 4 stems' : 'DSP básico';
+    const info = [pack, '='.repeat(pack.length), '', `Creado con Sample Pack Builder ${VERSION} — By SampledHead`, `Fecha: ${new Date().toISOString().slice(0, 10)}`,
+      `Canción de origen: ${chosen ? chosen.name : '-'}`, `Separación de stems: ${sepTxt}`, '',
+      `Tempo: ${song.bpmInt} BPM (${song.bpm.toFixed(2)})` + (song.bpmMax - song.bpmMin > 4 ? ` · tempo variable ${song.bpmMin}–${song.bpmMax} BPM (cada loop lleva su tempo real en el nombre)` : ''), `Tonalidad estimada: ${song.key}`,
       'Formato: WAV mono 24 bit / 44.1 kHz, normalizado a -1 dBFS (pico)', '', 'Contenido:',
       ...Object.keys(counts).sort().map((f) => `  ${f}: ${counts[f]} archivos`)].join('\n') + '\n';
     files.push({ name: `${pack}/pack_info.txt`, data: new TextEncoder().encode(info) });

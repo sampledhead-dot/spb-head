@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sample Pack Builder</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A//www.w3.org/2000/svg%22%20viewBox%3D%220%200%2064%2064%22%3E%3Cdefs%3E%3ClinearGradient%20id%3D%22g%22%20x1%3D%220%22%20y1%3D%220%22%20x2%3D%221%22%20y2%3D%221%22%3E%3Cstop%20offset%3D%220%22%20stop-color%3D%22%235eead4%22/%3E%3Cstop%20offset%3D%22.55%22%20stop-color%3D%22%23a78bfa%22/%3E%3Cstop%20offset%3D%221%22%20stop-color%3D%22%23fb923c%22/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect%20x%3D%222%22%20y%3D%222%22%20width%3D%2260%22%20height%3D%2260%22%20rx%3D%2215%22%20fill%3D%22%230f1620%22%20stroke%3D%22url%28%23g%29%22%20stroke-width%3D%223%22/%3E%3Cg%20fill%3D%22url%28%23g%29%22%3E%3Crect%20x%3D%2211%22%20y%3D%2227%22%20width%3D%224%22%20height%3D%2210%22%20rx%3D%222%22/%3E%3Crect%20x%3D%2218%22%20y%3D%2219%22%20width%3D%224%22%20height%3D%2226%22%20rx%3D%222%22/%3E%3Crect%20x%3D%2225%22%20y%3D%2223%22%20width%3D%224%22%20height%3D%2218%22%20rx%3D%222%22/%3E%3Crect%20x%3D%2235%22%20y%3D%2214%22%20width%3D%224%22%20height%3D%2236%22%20rx%3D%222%22/%3E%3Crect%20x%3D%2242%22%20y%3D%2221%22%20width%3D%224%22%20height%3D%2222%22%20rx%3D%222%22/%3E%3Crect%20x%3D%2249%22%20y%3D%2228%22%20width%3D%224%22%20height%3D%228%22%20rx%3D%222%22/%3E%3C/g%3E%3Cpath%20d%3D%22M32%209v46%22%20stroke%3D%22%23e8edf5%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-dasharray%3D%223%204%22/%3E%3Cpath%20d%3D%22M28.5%207h7L32%2012z%22%20fill%3D%22%23e8edf5%22/%3E%3C/svg%3E">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 16 16%27%3E%3Crect width=%2716%27 height=%2716%27 rx=%273%27 fill=%27%235eead4%27/%3E%3Cpath d=%27M4 11V5m2.7 6V3m2.6 8V6m2.7 5V4%27 stroke=%27%2306231f%27 stroke-width=%271.4%27 stroke-linecap=%27round%27/%3E%3C/svg%3E">
 <style>
   :root {
@@ -15,6 +16,17 @@
   header { padding:22px 20px 6px; max-width:1000px; margin:0 auto; }
   h1 { margin:0; font-size:22px; letter-spacing:.2px; }
   h1 span { color:var(--accent); }
+  h1 { display:flex; align-items:center; flex-wrap:wrap; gap:0 8px; }
+  h1 .logo { width:44px; height:44px; flex:none; margin-right:4px; filter:drop-shadow(0 0 10px rgba(94,234,212,.25)); }
+  h1 .logo svg { width:100%; height:100%; display:block; }
+  h1 .by { font-size:13px; font-weight:500; color:var(--muted); margin-left:8px; letter-spacing:.3px; white-space:nowrap; }
+  .grp { --c:var(--accent); border-left:3px solid var(--c); padding-left:10px; }
+  .grp .ghead h2 { color:var(--c); }
+  .grp .loopmark { color:var(--c); border-color:var(--c); }
+  .grp .row.sel { box-shadow:inset 3px 0 0 var(--c); }
+  .grp .row input[type=checkbox] { accent-color:var(--c); }
+  .grp .row.playing .pbtn { background:var(--c); border-color:var(--c); }
+  .grp .q i b { background:var(--c); }
   .sub { color:var(--muted); font-size:13px; margin-top:2px; }
   main { max-width:1000px; margin:0 auto; padding:10px 20px 110px; }
   .card { background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px; margin-top:14px; }
@@ -90,7 +102,7 @@
 </head>
 <body>
 <header>
-  <h1>Sample Pack <span>Builder</span></h1>
+  <h1><span class="logo" aria-hidden="true"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#5eead4"/><stop offset=".55" stop-color="#a78bfa"/><stop offset="1" stop-color="#fb923c"/></linearGradient></defs><rect x="2" y="2" width="60" height="60" rx="15" fill="#0f1620" stroke="url(#lg)" stroke-width="3"/><g fill="url(#lg)"><rect x="11" y="27" width="4" height="10" rx="2"/><rect x="18" y="19" width="4" height="26" rx="2"/><rect x="25" y="23" width="4" height="18" rx="2"/><rect x="35" y="14" width="4" height="36" rx="2"/><rect x="42" y="21" width="4" height="22" rx="2"/><rect x="49" y="28" width="4" height="8" rx="2"/></g><path d="M32 9v46" stroke="#e8edf5" stroke-width="2" stroke-linecap="round" stroke-dasharray="3 4"/><path d="M28.5 7h7L32 12z" fill="#e8edf5"/></svg></span>Sample Pack <span>Builder</span> <small class="by">By SampledHead</small></h1>
   <div class="sub">Sube una canción → separa stems → obtén breaks, loops, golpes, notas y acordes. Escucha, descarta y descarga el ZIP. Todo en tu navegador.</div>
 </header>
 
@@ -160,7 +172,7 @@
   </div>
 </div>
 
-<div style="text-align:center;color:#8c94a8;font-size:12px;padding:0 0 90px">Sample Pack Builder v9</div>
+<div style="text-align:center;color:#8c94a8;font-size:12px;padding:0 0 90px">Sample Pack Builder v11 · By SampledHead</div>
 <script>
 (function () {
   function msg(t) { var e = document.getElementById('error'); if (e) { e.textContent = t; e.hidden = false; } }

@@ -342,6 +342,65 @@ function trackBeats(onT, onS, t0, T, duration) {
   }
   return beats;
 }
+/* Curva de tempo local (autocorrelación por ventanas + Viterbi) y seguimiento de pulsos por programación dinámica:
+ * encuentra la secuencia de pulsos que mejor casa con los golpes permitiendo que el tempo cambie a lo largo de la canción. */
+function localPeriods(e, fps, P0) {
+  const n = e.length, win = Math.floor(12 * fps), hop = Math.floor(2 * fps), l0 = Math.max(4, Math.floor(P0 / 1.18)), l1 = Math.ceil(P0 * 1.18), nl = l1 - l0 + 1;
+  const centers = [], S = [];
+  for (let a = 0; a === 0 || a + win / 2 < n; a += hop) {
+    const b = Math.min(n, a + win), row = new Float64Array(nl); let z = 1e-9; for (let i = a; i < b; i++) z += e[i] * e[i];
+    for (let l = l0; l <= l1; l++) {
+      let s = 0;
+      for (const [m, wt] of [[1, 1], [2, 0.5], [4, 0.25]]) { const lag = l * m; if (lag >= b - a) continue; let c = 0; for (let i = a; i + lag < b; i++) c += e[i] * e[i + lag]; s += wt * c / z * ((b - a) / (b - a - lag)); }
+      row[l - l0] = s;
+    }
+    centers.push((a + b) / 2); S.push(row);
+    if (b >= n) break;
+  }
+  const W = S.length, cost = S.map((r) => Float64Array.from(r)), back = S.map(() => new Int32Array(nl)), lam = 150;
+  for (let w = 1; w < W; w++) for (let j = 0; j < nl; j++) {
+    let best = -Infinity, bi = 0;
+    for (let k = Math.max(0, j - 4); k <= Math.min(nl - 1, j + 4); k++) { const d = Math.log((l0 + j) / (l0 + k)), v = cost[w - 1][k] - lam * d * d; if (v > best) { best = v; bi = k; } }
+    cost[w][j] = S[w][j] + best; back[w][j] = bi;
+  }
+  const path = new Float64Array(W); let j = 0; for (let k = 1; k < nl; k++) if (cost[W - 1][k] > cost[W - 1][j]) j = k;
+  for (let w = W - 1; w >= 0; w--) {
+    const r = S[w]; let d = 0; if (j > 0 && j < nl - 1) { const den = r[j - 1] - 2 * r[j] + r[j + 1]; if (den < 0) d = clip(0.5 * (r[j - 1] - r[j + 1]) / den, -0.5, 0.5); }
+    path[w] = l0 + j + d; j = back[w][j];
+  }
+  const per = new Float32Array(n);
+  for (let i = 0, w = 0; i < n; i++) {
+    while (w + 1 < W && centers[w + 1] <= i) w++;
+    if (i <= centers[0] || w + 1 >= W) per[i] = path[i <= centers[0] ? 0 : W - 1];
+    else { const f = (i - centers[w]) / (centers[w + 1] - centers[w]); per[i] = path[w] * (1 - f) + path[w + 1] * f; }
+  }
+  return per;
+}
+function trackBeatsDP(env, fps, P0, ons, duration) {
+  const n = env.length, det = uniformFilter(env, Math.max(3, Math.floor(fps))), e0 = new Float32Array(n);
+  let v = 1e-12; for (let i = 0; i < n; i++) { e0[i] = Math.max(env[i] - det[i], 0); v += e0[i] * e0[i]; }
+  const sd = Math.sqrt(v / n), e = uniformFilter(e0, 3); for (let i = 0; i < n; i++) e[i] /= sd;
+  const per = localPeriods(e, fps, P0), cum = new Float32Array(n), back = new Int32Array(n).fill(-1), tight = 100;
+  for (let t = 0; t < n; t++) {
+    const P = per[t], a = Math.max(0, Math.round(t - 2 * P)), b = Math.round(t - P / 2); let best = 0, bi = -1;
+    for (let p = a; p <= b; p++) { const d = Math.log((t - p) / P), s = cum[p] - tight * d * d; if (s > best) { best = s; bi = p; } }
+    cum[t] = e[t] + best; back[t] = bi;
+  }
+  let last = n - 1; { const a = Math.max(0, Math.floor(n - 1.2 * per[n - 1])); for (let t = a; t < n; t++) if (cum[t] > cum[last]) last = t; }
+  const fr = []; for (let t = last; t >= 0; t = back[t]) fr.push(t);
+  fr.reverse();
+  const beats = fr.map((f) => f / fps);
+  // afinado: cada pulso se acerca al golpe fuerte más próximo (la DP va a saltos de ~6 ms)
+  const thr = ons.s.length ? percentile(ons.s, 50) * 0.5 : 0; let j = 0;
+  for (let k = 0; k < beats.length; k++) {
+    const t = beats[k]; while (j < ons.t.length && ons.t[j] < t - 0.03) j++;
+    let bi = -1, bs = 0; for (let q = j; q < ons.t.length && ons.t[q] <= t + 0.03; q++) { const s = ons.s[q] * (1 - Math.abs(ons.t[q] - t) / 0.06); if (ons.s[q] >= thr && s > bs) { bs = s; bi = q; } }
+    if (bi >= 0) beats[k] = t + 0.7 * (ons.t[bi] - t);
+  }
+  while (beats.length > 1 && beats[0] - (beats[1] - beats[0]) >= 0) beats.unshift(beats[0] - (beats[1] - beats[0]));
+  while (beats.length > 1 && beats[beats.length - 1] + (beats[beats.length - 1] - beats[beats.length - 2]) < duration) beats.push(2 * beats[beats.length - 1] - beats[beats.length - 2]);
+  return beats;
+}
 function pickDownbeat(beats, drums, bass, harm) {
   const hop = 256, ek = normEnv(fluxEnv(drums, 2048, hop, 0, 200)), eb = normEnv(fluxEnv(bass, 2048, hop, 0, 300));
   const n = Math.min(ek.length, eb.length), w = Math.max(1, Math.floor(0.03 * SR / hop)), sums = [0, 0, 0, 0], cnt = [0, 0, 0, 0], hs = [0, 0, 0, 0];
@@ -368,7 +427,9 @@ function findGrid(mix, drums, bass, harm, ons, duration, hint) {
   [t0, T] = refineGrid(ons.t, phase, T);
   if (hint && Math.abs(60 / T - hint) / hint > 0.012) T = 60 / hint;
   t0 = ((t0 % T) + T) % T;
-  const beats = trackBeats(ons.t, ons.s, t0, T, duration);
+  let beats = trackBeatsDP(env, SR / hop, T * SR / hop, ons, duration);
+  if (beats.length < 8) beats = trackBeats(ons.t, ons.s, t0, T, duration);
+  else { const d = beats.slice(1).map((t, i) => t - beats[i]); T = percentile(d, 50); }
   const db = beats.length >= 8 ? pickDownbeat(beats, drums, bass, harm) : 0;
   return { bpm: 60 / T, T, beats, db, beat0: beats[0] ?? t0, bar0: beats[db] ?? t0 };
 }
@@ -835,6 +896,11 @@ function hpssSeparate(mono) {
 
 /* ============================================================ pipeline */
 const bars = (n) => (n === 1 ? '1bar' : `${n}bars`);
+function mergedOnsets(mix, dr) {
+  const mo = detectOnsets(mix, { nfft: 1024, hop: 256, delta: 0.1, minGap: 0.03 }), dm = percentile(dr.onsetS, 50) + 1e-9, mm = percentile(mo.strength, 50) + 1e-9;
+  const merged = dr.onsetT.map((t, i) => [t, dr.onsetS[i] / dm]).concat(Array.from(mo.pos, (p, i) => [p / SR, 0.5 * mo.strength[i] / mm])).sort((a, b) => a[0] - b[0]);
+  return { t: merged.map((v) => v[0]), s: merged.map((v) => v[1]) };
+}
 function analyzeAll({ mix, drums, bass, other, guitar, piano, bpmHint }) {
   const duration = mix.length / SR;
   progress(5, 'Detectando golpes y separando las piezas de la batería');
@@ -843,10 +909,9 @@ function analyzeAll({ mix, drums, bass, other, guitar, piano, bpmHint }) {
   let harm = new Float32Array(mix.length), hmax = 0;
   for (let i = 0; i < harm.length; i++) { harm[i] = other[i] + bass[i] + (guitar ? guitar[i] : 0) + (piano ? piano[i] : 0); hmax = Math.max(hmax, Math.abs(harm[i])); }
   if (hmax <= 1e-4) harm = mix;
-  const mo = detectOnsets(mix, { nfft: 1024, hop: 256, delta: 0.1, minGap: 0.03 }), dm = percentile(dr.onsetS, 50) + 1e-9, mm = percentile(mo.strength, 50) + 1e-9;
-  const merged = dr.onsetT.map((t, i) => [t, dr.onsetS[i] / dm]).concat(Array.from(mo.pos, (p, i) => [p / SR, 0.5 * mo.strength[i] / mm])).sort((a, b) => a[0] - b[0]);
-  const grid = findGrid(mix, drums, bass, harm, { t: merged.map((v) => v[0]), s: merged.map((v) => v[1]) }, duration, bpmHint);
+  const grid = findGrid(mix, drums, bass, harm, mergedOnsets(mix, dr), duration, bpmHint);
   const tl = grid.beats.length > 8 ? grid.beats.slice(1).map((t, i) => t - grid.beats[i]) : [grid.T];
+  const tl4 = grid.beats.length > 12 ? grid.beats.slice(4).map((t, i) => (t - grid.beats[i]) / 4) : tl;   // tempo por compás (sin el temblor pulso a pulso)
   const songBpm = 60 / percentile(tl, 50), [tonic, mode, kscore] = estimateKey(chromaMean(harm)), songKey = [tonic, mode];
   const stems = [['break', drums], ['bass_loop', bass], ['inst_loop', other]];
   if (guitar) stems.push(['guitar_loop', guitar]); if (piano) stems.push(['keys_loop', piano]);
@@ -884,7 +949,7 @@ function analyzeAll({ mix, drums, bass, other, guitar, piano, bpmHint }) {
       score: Math.round(100 * clip(s.score, 0, 1)), dur: Math.round(audio.length / SR * 1000) / 1000, peaks: peaksOf(audio), audio, ...(s.bars ? { bars: s.bars } : {}), ...(s.group !== undefined ? { group: s.group } : {}), ...(s.s !== undefined ? { t0: Math.round(s.s / SR * 1000) / 1000, t1: Math.round(s.e / SR * 1000) / 1000 } : {}) };
   });
   progress(100, 'Listo');
-  return { song: { duration: Math.round(duration * 100) / 100, bpm: Math.round(songBpm * 100) / 100, bpmInt: Math.round(songBpm), bpmMin: Math.round(600 / percentile(tl, 95)) / 10, bpmMax: Math.round(600 / percentile(tl, 5)) / 10, key: keyName(...songKey), keyConfidence: kscore },
+  return { song: { duration: Math.round(duration * 100) / 100, bpm: Math.round(songBpm * 100) / 100, bpmInt: Math.round(songBpm), bpmMin: Math.round(600 / percentile(tl4, 97)) / 10, bpmMax: Math.round(600 / percentile(tl4, 3)) / 10, key: keyName(...songKey), keyConfidence: kscore },
     samples, structure: { bars: infos[0].nBars, firstDownbeat: Math.round(grid.bar0 * 1000) / 1000, phrase, tempoMin: Math.round(600 / percentile(tl, 95)) / 10, tempoMax: Math.round(600 / percentile(tl, 5)) / 10,
       sections: Object.fromEntries(stems.map(([k], i) => [k, infos[i].bounds])) } };
 }
@@ -910,7 +975,7 @@ function handle(m) {
   } catch (err) { post({ type: 'error', message: String(err && err.message || err), stack: String(err && err.stack || '') }); }
 }
 if (typeof importScripts === 'function') self.onmessage = (e) => handle(e.data);   // dentro de un Worker
-const API = { dbg: (a) => { DEBUG_CLS = a; }, detectOnsets, stemBars, phrasePhase, pickLoops, splitDrums, preOnset, trackBeats, handle, setPost: (f) => { post = f; }, analyzeAll, hpssSeparate, extractDrums, findGrid, yin, estimateKey, chromaMean };
+const API = { gridFor: (mix, drums, bass, harm, hint) => { const dr = extractDrums(drums); return findGrid(mix, drums, bass, harm, mergedOnsets(mix, dr), mix.length / SR, hint); }, dbg: (a) => { DEBUG_CLS = a; }, detectOnsets, stemBars, phrasePhase, pickLoops, splitDrums, preOnset, trackBeats, handle, setPost: (f) => { post = f; }, analyzeAll, hpssSeparate, extractDrums, findGrid, yin, estimateKey, chromaMean };
 root.SPB = API;                                                                  // uso en el hilo principal (file://)
 if (typeof module !== 'undefined') module.exports = API;
 })(typeof self !== 'undefined' ? self : globalThis);
