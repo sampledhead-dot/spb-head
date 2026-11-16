@@ -5,7 +5,7 @@
 window.__spbLoaded = true;
 const $ = (s) => document.querySelector(s);
 const SR = 44100;
-const VERSION = 'v11';
+const VERSION = 'v12';
 
 /* ---------------------------------------------------------------- diagnóstico e informes de error */
 const T0 = performance.now(), LOGS = [], TRACE = [], DIAG = {};
@@ -585,3 +585,5 @@ $('#newbtn').addEventListener('click', () => {
 });
 
 $('#repbtn').addEventListener('click', () => { if (lastReport) downloadText(lastReportName, lastReport); });
+
+if ('serviceWorker' in navigator && location.protocol === 'https:') navigator.serviceWorker.register('sw.js').catch((e) => console.warn('service worker', e));
