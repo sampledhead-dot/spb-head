@@ -179,7 +179,7 @@ header{padding-top:calc(22px + env(safe-area-inset-top,0px))}
   </div>
 </div>
 
-<div style="text-align:center;color:#8c94a8;font-size:12px;padding:0 0 90px">Sample Pack Builder v13 · By SampledHead</div>
+<div style="text-align:center;color:#8c94a8;font-size:12px;padding:0 0 90px">Sample Pack Builder v14 · By SampledHead</div>
 <script>
 (function () {
   function msg(t) { var e = document.getElementById('error'); if (e) { e.textContent = t; e.hidden = false; } }
@@ -189,5 +189,13 @@ header{padding-top:calc(22px + env(safe-area-inset-top,0px))}
 })();
 </script>
 <script src="app.js" defer></script>
+<script src="sh-core.js"></script>
+<script>/* v14: conexión con todas las apps (sh-core): recibe una canción o un stem y lo deja listo para hacer el pack */
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!window.SH)return;
+  SH.ui.dock({me:'spb',pos:'right',kinds:['stem','loop'],provide:null,sendHint:'Esta app hace packs (ZIP); para enviar sonidos sueltos usa el sampler',
+    accept:async list=>{const it=list.find(x=>x.wav);if(!it||typeof setFile!=='function')return false;setFile(SH.toFile(it));window.scrollTo({top:0,behavior:'smooth'});return true}});
+});
+</script>
 </body>
 </html>

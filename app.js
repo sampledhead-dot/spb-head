@@ -5,7 +5,7 @@
 window.__spbLoaded = true;
 const $ = (s) => document.querySelector(s);
 const SR = 44100;
-const VERSION = 'v13';
+const VERSION = 'v14';
 
 /* ---------------------------------------------------------------- diagnóstico e informes de error */
 const T0 = performance.now(), LOGS = [], TRACE = [], DIAG = {};
@@ -192,7 +192,12 @@ async function loadOrt() {
 }
 async function fetchModel(onProg, MODEL_URL = MODEL4_URL, approx = 172e6) {
   let cache = null;
-  try { cache = await caches.open('spb-models-v1'); const hit = await cache.match(MODEL_URL); if (hit) { DIAG.demucs = { ...(DIAG.demucs || {}), model: 'caché' }; return await hit.arrayBuffer(); } } catch (e) { cache = null; }
+  if (window.SH && SH.isDesktop) { DIAG.demucs = { ...(DIAG.demucs || {}), model: 'carpeta compartida (Documentos/SampledHead/Modelos)' }; return await SH.models.get(MODEL_URL, { size: approx, onProgress: (f, b, t) => onProg && onProg(b || f * approx, t || approx) }); }
+  try {   // v14: caché común de todas las apps (sh-models-v1); se reaprovecha la antigua spb-models-v1
+    cache = await caches.open('sh-models-v1'); let hit = await cache.match(MODEL_URL);
+    if (!hit) { const old = await caches.open('spb-models-v1'); hit = await old.match(MODEL_URL); if (hit) { const ab = await hit.arrayBuffer(); cache.put(MODEL_URL, new Response(ab.slice(0))).catch(() => {}); DIAG.demucs = { ...(DIAG.demucs || {}), model: 'caché antigua' }; return ab; } }
+    if (hit) { DIAG.demucs = { ...(DIAG.demucs || {}), model: 'caché' }; return await hit.arrayBuffer(); }
+  } catch (e) { cache = null; }
   DIAG.demucs = { ...(DIAG.demucs || {}), model: 'red', cacheDisponible: !!cache };
   const r = await fetch(MODEL_URL);
   if (!r.ok) throw new Error('No se pudo descargar el modelo (' + r.status + ')');
