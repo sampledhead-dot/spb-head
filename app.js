@@ -5,7 +5,7 @@
 window.__spbLoaded = true;
 const $ = (s) => document.querySelector(s);
 const SR = 44100;
-const VERSION = 'v12';
+const VERSION = 'v13';
 
 /* ---------------------------------------------------------------- diagnóstico e informes de error */
 const T0 = performance.now(), LOGS = [], TRACE = [], DIAG = {};

@@ -14,6 +14,7 @@ Tres archivos en el repo (GitHub Pages): `index.html`, `app.js`, `worker.js`. `s
 3. Estructura de tres archivos + versión standalone para pruebas locales.
 
 ## Historial
+- **v13** (19-11-2026) — zona segura: la cabecera (y, donde las hay, las ventanas a pantalla completa y la barra inferior) deja libre la franja de la hora, la batería y la cámara del móvil con `env(safe-area-inset-*)`. Comprobado en Chrome simulando un móvil con 48 px arriba y 24 px abajo: ningún botón tapado. En ordenador no cambia nada. También en `spb-standalone.html`.
 - v1–v2: versión Python, luego port a navegador; avisos al abrir en local.
 - v3: script clásico + fallback sin Worker. v4: standalone de un archivo.
 - v5: reducción de memoria (Demucs por trozos, límites, defaults móvil).

@@ -101,6 +101,10 @@
     .name { order:10; flex:1 1 100%; white-space:normal; word-break:break-all; padding-left:2px; }
     .meta { margin-left:auto; } .q { display:none; } .row select { width:112px; } #dock input { width:130px; }
   }
+
+/* zona segura: que nada quede bajo la hora, la batería o la cámara del móvil (y abajo, bajo la barra de gestos) */
+header{padding-top:calc(22px + env(safe-area-inset-top,0px))}
+#dock{padding-bottom:calc(10px + env(safe-area-inset-bottom,0px))}
 </style>
 </head>
 <body>
@@ -175,7 +179,7 @@
   </div>
 </div>
 
-<div style="text-align:center;color:#8c94a8;font-size:12px;padding:0 0 90px">Sample Pack Builder v12 · By SampledHead</div>
+<div style="text-align:center;color:#8c94a8;font-size:12px;padding:0 0 90px">Sample Pack Builder v13 · By SampledHead</div>
 <script>
 (function () {
   function msg(t) { var e = document.getElementById('error'); if (e) { e.textContent = t; e.hidden = false; } }
