@@ -197,5 +197,18 @@ document.addEventListener('DOMContentLoaded',()=>{
     accept:async list=>{const it=list.find(x=>x.wav);if(!it||typeof setFile!=='function')return false;setFile(SH.toFile(it));window.scrollTo({top:0,behavior:'smooth'});return true}});
 });
 </script>
+<script>
+/* v15: menú común «☰ Menú» de todas las apps (sh-core 1.5.0). «⇄ Apps» va dentro (Otras apps). */
+document.addEventListener('DOMContentLoaded',()=>{
+  if(!window.SH||!SH.ui||!SH.ui.menu)return;
+  SH.report.install({me:'spb',version:()=>typeof VERSION!=='undefined'?VERSION:'v15'});
+  SH.ui.menu({
+    me:'spb',version:()=>(typeof VERSION!=='undefined'?VERSION:'v15').replace(/^v/,''),button:'auto',
+    importar:[{icon:'🎵',click:'#file',label:'Elegir la canción'}],
+    exportar:[{icon:'⬇',click:'#export',label:'Descargar el pack (ZIP)',hint:'Primero «Analizar y extraer»'}],
+    report:()=>{const b=document.getElementById('repbtn');if(b&&!document.getElementById('repbar').hidden)b.click();else SH.report.download('informe manual');}
+  });
+});
+</script>
 </body>
 </html>
